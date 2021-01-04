@@ -1,5 +1,5 @@
 {
     "require": {
-        "plumtreesystems/neo4j-bolt": "*"
+        "plumtreesystems/neo4j-php-client": "*"
     }
 }

@@ -17,6 +17,7 @@ $redis->connect(REDIS_IP, REDIS_PORT);
 // Composer
 require_once 'vendor/autoload.php';
 use GraphAware\Neo4j\Client\ClientBuilder;  // (graphaware/neo4j-php-client)
+//use plumtreesystems\Neo4j\Client\ClientBuilder;
 
 // Neo4j
 $neo = ClientBuilder::create()
@@ -25,11 +26,31 @@ $neo = ClientBuilder::create()
                     ->build(); // NOTE: set timeout to 0 (so it does not timeout on huge transactions)
 
 // Create Neo4j constraints (for unique indexes, not regular indexes (should be faster))
-$neo->run("CREATE CONSTRAINT ON (b:block) ASSERT b.hash IS UNIQUE");
-$neo->run("CREATE CONSTRAINT ON (t:tx) ASSERT t.txid IS UNIQUE");
-$neo->run("CREATE CONSTRAINT ON (o:output) ASSERT o.index IS UNIQUE");
-$neo->run("CREATE INDEX ON :block(height)");
-$neo->run("CREATE INDEX ON :address(address)"); // for getting outputs locked to an address
+try {
+    $neo->run("CREATE CONSTRAINT ON (b:block) ASSERT b.hash IS UNIQUE");
+} catch (Exception $e) {
+    echo "Constraint over block already existing, skipping \n" ;
+}
+try {
+    $neo->run("CREATE CONSTRAINT ON (t:tx) ASSERT t.txid IS UNIQUE");
+} catch (Exception $e) {
+    echo "Constraint over tx already existing, skipping \n" ;
+}
+try {
+    $neo->run("CREATE CONSTRAINT ON (o:output) ASSERT o.index IS UNIQUE");
+} catch (Exception $e) {
+    echo "Constraint over output already existing, skipping \n" ;
+}
+try {
+    $neo->run("CREATE INDEX ON :block(height)");
+} catch (Exception $e) {
+    echo "Index over block already existing, skipping \n" ;
+}
+try {
+    $neo->run("CREATE INDEX ON :address(address)"); // for getting outputs locked to an address
+} catch (Exception $e) {
+    echo "Index over address already existing, skipping \n" ;
+}
 
 // Functions
 include('functions/tx.php');        // decode transaction
@@ -192,7 +213,7 @@ while(true) { // Keep trying to read files forever
         // a. Create the new block, or add properties to it if we've already made a placeholder for it.
         $createblock = "
         MERGE (block:block {hash:'$blockhash'})
-        CREATE UNIQUE (block)-[:coinbase]->(:output:coinbase)
+        MERGE (block)-[:coinbase]->(:output:coinbase)
         SET
             block.size=$blocksize,
             block.txcount=$txcount,
